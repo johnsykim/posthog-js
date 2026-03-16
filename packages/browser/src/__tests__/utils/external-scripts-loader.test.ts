@@ -113,4 +113,64 @@ describe('external-scripts-loader', () => {
             delete mockPostHog.config.prepare_external_dependency_script
         })
     })
+
+    describe('versioned script loading', () => {
+        const mockPostHog = {
+            config: {
+                api_host: 'https://us.posthog.com',
+                token: 'test-token',
+                external_scripts_inject_target: 'body',
+            },
+            version: '1.0.0',
+            _scriptBaseUrl: 'https://us-assets.i.posthog.com/1.358.0',
+        } as PostHog
+        mockPostHog.requestRouter = new RequestRouter(mockPostHog)
+
+        const callback = jest.fn()
+        beforeEach(() => {
+            callback.mockClear()
+            document!.getElementsByTagName('html')![0].innerHTML = ''
+        })
+
+        it('loads extensions from versioned base URL when _scriptBaseUrl is set', () => {
+            assignableWindow.__PosthogExtensions__.loadExternalDependency(mockPostHog, 'recorder', callback)
+
+            const scripts = document!.getElementsByTagName('script')
+            expect(scripts.length).toBe(1)
+            expect(scripts[0].src).toBe('https://us-assets.i.posthog.com/1.358.0/recorder.js')
+        })
+
+        it('loads toolbar from versioned base URL with cache-busting timestamp', () => {
+            jest.useFakeTimers()
+            jest.setSystemTime(1726067100000)
+
+            assignableWindow.__PosthogExtensions__.loadExternalDependency(mockPostHog, 'toolbar', callback)
+
+            expect(document!.getElementsByTagName('script')[0].src).toBe(
+                'https://us-assets.i.posthog.com/1.358.0/toolbar.js?t=1726067100000'
+            )
+        })
+
+        it('loads remote-config from token-specific path even when _scriptBaseUrl is set', () => {
+            assignableWindow.__PosthogExtensions__.loadExternalDependency(mockPostHog, 'remote-config', callback)
+
+            const scripts = document!.getElementsByTagName('script')
+            expect(scripts.length).toBe(1)
+            expect(scripts[0].src).toBe('https://us-assets.i.posthog.com/array/test-token/config.js')
+        })
+
+        it('falls back to default /static/ path when _scriptBaseUrl is not set', () => {
+            const noVersionPostHog = {
+                ...mockPostHog,
+                _scriptBaseUrl: undefined,
+            } as PostHog
+            noVersionPostHog.requestRouter = new RequestRouter(noVersionPostHog)
+
+            assignableWindow.__PosthogExtensions__.loadExternalDependency(noVersionPostHog, 'recorder', callback)
+
+            const scripts = document!.getElementsByTagName('script')
+            expect(scripts.length).toBe(1)
+            expect(scripts[0].src).toBe('https://us-assets.i.posthog.com/static/recorder.js?v=1.0.0')
+        })
+    })
 })

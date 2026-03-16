@@ -409,6 +409,51 @@ describe('posthog core', () => {
 
             expect(posthog.analyticsDefaultEndpoint).toEqual('/i/v0/e/')
         })
+
+        it('sets _scriptBaseUrl when sdkVersion.scriptBaseUrl is provided', () => {
+            const posthog = posthogWith({})
+
+            posthog._onRemoteConfig({
+                sdkVersion: {
+                    requested: '1',
+                    resolved: '1.358.0',
+                    scriptBaseUrl: 'https://us-assets.i.posthog.com/1.358.0',
+                },
+            } as RemoteConfig)
+
+            expect(posthog._scriptBaseUrl).toEqual('https://us-assets.i.posthog.com/1.358.0')
+        })
+
+        it('leaves _scriptBaseUrl undefined when sdkVersion is absent', () => {
+            const posthog = posthogWith({})
+
+            posthog._onRemoteConfig({} as RemoteConfig)
+
+            expect(posthog._scriptBaseUrl).toBeUndefined()
+        })
+
+        it('leaves _scriptBaseUrl undefined when sdkVersion has no scriptBaseUrl', () => {
+            const posthog = posthogWith({})
+
+            posthog._onRemoteConfig({
+                sdkVersion: { requested: '1', resolved: '1.358.0' },
+            } as RemoteConfig)
+
+            expect(posthog._scriptBaseUrl).toBeUndefined()
+        })
+
+        it('registers $sdk_version_requested session property when sdkVersion.requested is present', () => {
+            const posthog = posthogWith({})
+            const spy = jest.spyOn(posthog, 'register_for_session')
+
+            posthog._onRemoteConfig({
+                sdkVersion: { requested: '1', resolved: '1.358.0' },
+            } as RemoteConfig)
+
+            expect(spy).toHaveBeenCalledWith(
+                expect.objectContaining({ $sdk_version_requested: '1' })
+            )
+        })
     })
 
     describe('_calculate_event_properties()', () => {

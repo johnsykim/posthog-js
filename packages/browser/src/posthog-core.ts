@@ -376,6 +376,7 @@ export class PostHog implements PostHogInterface {
     __request_queue: QueuedRequestWithOptions[]
     _pendingRemoteConfig?: RemoteConfig
     _remoteConfigLoader?: RemoteConfigLoader
+    _scriptBaseUrl?: string
     analyticsDefaultEndpoint: string
     version: string = Config.LIB_VERSION
     _initialPersonProfilesConfig: 'always' | 'never' | 'identified_only' | null
@@ -853,6 +854,16 @@ export class PostHog implements PostHogInterface {
 
         if (config.analytics?.endpoint) {
             this.analyticsDefaultEndpoint = config.analytics.endpoint
+        }
+
+        if (config.sdkVersion?.scriptBaseUrl) {
+            this._scriptBaseUrl = config.sdkVersion.scriptBaseUrl
+        }
+
+        if (config.sdkVersion?.requested) {
+            this.register_for_session({
+                $sdk_version_requested: config.sdkVersion.requested,
+            })
         }
 
         this.set_config({
