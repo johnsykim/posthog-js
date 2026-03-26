@@ -384,7 +384,7 @@ export interface RemoteConfig {
      */
     sdkVersion?: {
         requested: string
-        resolved: string
+        resolved?: string
         scriptBaseUrl?: string
     }
 }
